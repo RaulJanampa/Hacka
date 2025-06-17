@@ -8,13 +8,12 @@ import React, { useEffect, useState } from "react";
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string>(""); // Nueva variable para errores
   const router = useRouter();
 
   const handleRedirect = () => {
     const user = localStorage.getItem("user");
-    console.log("User Info:", user);
     if (user) {
-      console.log("User exists, redirecting...");
       const parsedUser = JSON.parse(user);
       if (parsedUser.role === "admin") {
         router.push("/admin");
@@ -30,6 +29,26 @@ export default function LoginPage() {
     handleRedirect();
   }, []);
 
+  const handleLogin = async (e: any) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/auth/login",
+        { username, password },
+        { headers: { "Content-Type": "application/json" } }
+      );
+      
+      if (response.status === 200) {
+        localStorage.setItem("token", response.data.token);
+        await handleAuthMe();
+      } else {
+        setErrorMessage("Credenciales incorrectas");
+      }
+    } catch (error) {
+      setErrorMessage("Hubo un error al intentar iniciar sesión");
+    }
+  };
+
   const handleAuthMe = async () => {
     const response = await axios.get("http://localhost:8000/auth/me", {
       headers: {
@@ -38,37 +57,11 @@ export default function LoginPage() {
       },
     });
 
-    console.log("Auth Me Response:", response.data);
     if (response.status === 200) {
       localStorage.setItem("user", JSON.stringify(response.data));
-      console.log("User Info successful:", response.data);
-      handleRedirect(); // Redirect based on user role
+      handleRedirect(); // Redirige según el rol
     } else {
-      console.error("User failed:", response.data.message);
-    }
-  };
-
-  const handleLogin = async (e: any) => {
-    e.preventDefault();
-    const response = await axios.post(
-      "http://localhost:8000/auth/login",
-      {
-        username,
-        password,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (response.status === 200) {
-      localStorage.setItem("token", response.data.token);
-      console.log("Login successful:", response.data);
-      await handleAuthMe(); // Fetch user info after login
-    } else {
-      console.error("Login failed:", response.data.message);
+      setErrorMessage("Error al obtener los detalles del usuario");
     }
   };
 
@@ -94,6 +87,7 @@ export default function LoginPage() {
           <button type="submit" className="p-2 bg-blue-500 text-white rounded">
             Login
           </button>
+          {errorMessage && <p className="text-red-500">{errorMessage}</p>} {/* Mostrar error */}
           <Link href="/auth/register" className="text-blue-500">
             Don't have an account? Register
           </Link>
