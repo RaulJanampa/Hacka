@@ -12,8 +12,8 @@ export default function HomeRedirect() {
       // Si no hay token, redirigir al login
       router.push('/auth/login');
     } else {
-      // Si hay token, redirigir a la página principal o al dashboard
-      router.push('/');
+      // Si hay token, redirigir al dashboard
+      router.push('/dashboard');  // Aquí rediriges al dashboard, no a la página principal
     }
   }, [router]);
 

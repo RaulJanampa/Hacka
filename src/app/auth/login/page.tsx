@@ -1,98 +1,71 @@
-"use client";
+'use client'; // Especifica que este es un componente de cliente.
 
+import { useState } from "react";
 import axios from "axios";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation"; // Usamos el hook de Next.js para navegar
+import { useAuth } from "../../AuthContext"; // Usamos el contexto para el manejo de autenticación
+import Link from "next/link"; // Para agregar el enlace al registro
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string>(""); // Nueva variable para errores
-  const router = useRouter();
+  const [email, setEmail] = useState(""); // Estado para el email
+  const [password, setPassword] = useState(""); // Estado para la contraseña
+  const [errorMessage, setErrorMessage] = useState(""); // Mensaje de error
+  const { login } = useAuth(); // Usamos el hook useAuth para acceder a la función de login
+  const router = useRouter(); // Hook de Next.js para navegación
 
-  const handleRedirect = () => {
-    const user = localStorage.getItem("user");
-    if (user) {
-      const parsedUser = JSON.parse(user);
-      if (parsedUser.role === "admin") {
-        router.push("/admin");
-      } else {
-        router.push("/");
-      }
-    } else {
-      router.push("/auth/login");
-    }
-  };
-
-  useEffect(() => {
-    handleRedirect();
-  }, []);
-
-  const handleLogin = async (e: any) => {
-    e.preventDefault();
+  // Maneja la petición de login
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault(); // Prevenimos el comportamiento por defecto del formulario
     try {
+      // Hacemos la petición POST a la API de login
       const response = await axios.post(
-        "http://localhost:8000/auth/login",
-        { username, password },
-        { headers: { "Content-Type": "application/json" } }
+        "http://198.211.105.95:8080/authentication/login", 
+        {
+          email,
+          passwd: password, // Enviamos el correo y la contraseña en el cuerpo de la petición
+        }
       );
-      
+
       if (response.status === 200) {
-        localStorage.setItem("token", response.data.token);
-        await handleAuthMe();
-      } else {
-        setErrorMessage("Credenciales incorrectas");
+        // Si la respuesta es exitosa, almacenamos el token en el localStorage y hacemos el login
+        login(response.data.token); // Usamos la función de login que guardará el token
+        router.push("/"); // Redirigimos al usuario a la página principal
       }
-    } catch (error) {
-      setErrorMessage("Hubo un error al intentar iniciar sesión");
-    }
-  };
-
-  const handleAuthMe = async () => {
-    const response = await axios.get("http://localhost:8000/auth/me", {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    });
-
-    if (response.status === 200) {
-      localStorage.setItem("user", JSON.stringify(response.data));
-      handleRedirect(); // Redirige según el rol
-    } else {
-      setErrorMessage("Error al obtener los detalles del usuario");
+    } catch (error: any) {
+      // Si hay algún error en la petición, mostramos un mensaje de error
+      setErrorMessage("Credenciales incorrectas o error de conexión.");
     }
   };
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <h1 className="text-2xl font-bold">Login</h1>
-        <form className="flex flex-col gap-4" onSubmit={handleLogin}>
-          <input
-            type="text"
-            placeholder="Username"
-            className="p-2 border rounded"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="p-2 border rounded"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button type="submit" className="p-2 bg-blue-500 text-white rounded">
-            Login
-          </button>
-          {errorMessage && <p className="text-red-500">{errorMessage}</p>} {/* Mostrar error */}
-          <Link href="/auth/register" className="text-blue-500">
-            Don't have an account? Register
-          </Link>
-        </form>
-      </main>
+    <div>
+      <h1>Login</h1>
+      <form onSubmit={handleLogin}>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <button type="submit">Login</button>
+      </form>
+      {errorMessage && <p>{errorMessage}</p>}
+      
+      {/* Enlace al formulario de registro si no tienes cuenta */}
+      <p>
+        ¿No tienes una cuenta? 
+        <Link href="/auth/register" className="text-blue-500">
+          Regístrate aquí
+        </Link>
+      </p>
     </div>
   );
 }
